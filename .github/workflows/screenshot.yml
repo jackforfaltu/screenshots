@@ -1,1 +1,36 @@
- 
+name: Website Screenshot
+on:
+  schedule:
+    - cron: '0 */12 * * *'  # Runs every 12 hours
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm install puppeteer
+        
+      - name: Create screenshots directory
+        run: mkdir -p screenshots
+        
+      - name: Take screenshot
+        run: node .github/scripts/screenshot.js
+        
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          
+      - name: Commit and push screenshots
+        run: |
+          git add screenshots/
+          git commit -m "Update screenshots $(date +'%Y-%m-%d %H:%M:%S')"
+          git push  
