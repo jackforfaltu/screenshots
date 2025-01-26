@@ -63,7 +63,6 @@ async function captureScreenshot() {
             deviceScaleFactor: 2
         });
         
-        // Use the deployed URL instead of localhost
         await page.goto('https://hijri-waras-cal.netlify.app/', {
             waitUntil: 'networkidle0',
             timeout: 30000
@@ -108,5 +107,6 @@ async function captureScreenshot() {
         console.error('Error capturing screenshot:', error);
         process.exit(1);
     } finally {
-        console.log('Closing browser');
-    
+        await browser.close();
+    }
+}
