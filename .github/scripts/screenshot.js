@@ -28,6 +28,15 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
     }
 
     console.log(`Final image size: ${(optimizedBuffer.length / 1024).toFixed(2)}KB`);
+    
+    // Force remove existing file if it exists
+    if (fs.existsSync(inputPath)) {
+        console.log(`Removing existing file: ${inputPath}`);
+        fs.unlinkSync(inputPath);
+    }
+    
+    // Write new file
+    console.log(`Writing new file: ${inputPath}`);
     await fs.promises.writeFile(inputPath, optimizedBuffer);
 }
 
@@ -64,6 +73,7 @@ async function captureScreenshot() {
         const timestampPath = path.join('screenshots', `calendar-${timestamp}.jpg`);
         const latestPath = path.join('screenshots', 'latest.jpg');
 
+        // Take timestamped screenshot
         console.log(`Taking screenshot: ${timestampPath}`);
         await page.screenshot({
             path: timestampPath,
@@ -72,16 +82,12 @@ async function captureScreenshot() {
             quality: 80
         });
 
-        console.log(`Taking screenshot: ${latestPath}`);
-        await page.screenshot({
-            path: latestPath,
-            fullPage: false,
-            type: 'jpeg',
-            quality: 80
-        });
-
+        // Optimize timestamped image
         await optimizeImage(timestampPath);
-        await optimizeImage(latestPath);
+
+        // Copy optimized timestamped image to latest.jpg
+        console.log('Copying optimized image to latest.jpg');
+        fs.copyFileSync(timestampPath, latestPath);
 
         console.log('Verifying files...');
         const timestampExists = fs.existsSync(timestampPath);
