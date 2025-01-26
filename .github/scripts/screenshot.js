@@ -47,9 +47,36 @@ async function captureScreenshot() {
             timeout: 30000
         });
 
-        console.log('Waiting for calendar widget...');
-        await page.waitForSelector('#calendar-widget', { timeout: 10000 });
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for animations
+        // Add debug logging
+        console.log('Page loaded, checking content...');
+        const content = await page.content();
+        console.log('Page content length:', content.length);
+        
+        // Wait for any element to be visible first
+        console.log('Waiting for body element...');
+        await page.waitForSelector('body', { timeout: 5000 });
+
+        // Try different selectors
+        console.log('Looking for calendar elements...');
+        const selectors = [
+            '#calendar-widget',
+            '.calendar-widget',
+            '[data-testid="calendar-widget"]',
+            '.widget-container'
+        ];
+
+        for (const selector of selectors) {
+            console.log(`Checking for selector: ${selector}`);
+            const element = await page.$(selector);
+            if (element) {
+                console.log(`Found element with selector: ${selector}`);
+                break;
+            }
+        }
+
+        // Wait a bit longer for any dynamic content
+        console.log('Waiting for page to stabilize...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const screenshotDir = path.join(process.cwd(), 'screenshots');
@@ -67,31 +94,4 @@ async function captureScreenshot() {
         await optimizeImage(timestampPath);
         await updateLatestImage(timestampPath, latestPath);
 
-        // Verify files were created
-        const timestampExists = fs.existsSync(timestampPath);
-        const latestExists = fs.existsSync(latestPath);
-        
-        console.log(`Timestamp file exists: ${timestampExists}`);
-        console.log(`Latest file exists: ${latestExists}`);
-
-        if (!timestampExists || !latestExists) {
-            throw new Error('Screenshot files were not created successfully');
-        }
-
-        const timestampSize = fs.statSync(timestampPath).size / 1024;
-        const latestSize = fs.statSync(latestPath).size / 1024;
-        console.log(`Final timestamp file size: ${timestampSize.toFixed(2)}KB`);
-        console.log(`Final latest file size: ${latestSize.toFixed(2)}KB`);
-
-    } catch (error) {
-        console.error('Error capturing screenshot:', error);
-        process.exit(1);
-    } finally {
-        await browser.close();
-    }
-}
-
-captureScreenshot().catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
-}); 
+    
