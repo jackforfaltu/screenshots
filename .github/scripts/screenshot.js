@@ -8,10 +8,6 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
     const imageBuffer = await fs.promises.readFile(inputPath);
     let quality = 80;
     let optimizedBuffer = await sharp(imageBuffer)
-        .resize(375, null, {
-            withoutEnlargement: true,
-            fit: 'inside'
-        })
         .jpeg({ quality })
         .toBuffer();
 
@@ -19,10 +15,6 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
         quality -= 5;
         console.log(`Reducing quality to ${quality}...`);
         optimizedBuffer = await sharp(imageBuffer)
-            .resize(375, null, {
-                withoutEnlargement: true,
-                fit: 'inside'
-            })
             .jpeg({ quality })
             .toBuffer();
     }
@@ -32,21 +24,7 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
 }
 
 async function updateLatestImage(sourcePath, targetPath) {
-    console.log(`Updating latest image from ${sourcePath} to ${targetPath}`);
-    
-    if (fs.existsSync(targetPath)) {
-        console.log('Removing existing latest.jpg');
-        fs.unlinkSync(targetPath);
-    }
-
-    const imageBuffer = await fs.promises.readFile(sourcePath);
-    
-    console.log('Writing new latest.jpg');
-    await fs.promises.writeFile(targetPath, imageBuffer);
-    
-    const fileExists = fs.existsSync(targetPath);
-    const fileSize = fs.statSync(targetPath).size;
-    console.log(`Latest.jpg exists: ${fileExists}, size: ${(fileSize / 1024).toFixed(2)}KB`);
+    await fs.promises.copyFile(sourcePath, targetPath);
 }
 
 async function captureScreenshot() {
@@ -63,31 +41,33 @@ async function captureScreenshot() {
             deviceScaleFactor: 2
         });
         
+        console.log('Navigating to site...');
         await page.goto('https://hijri-waras-cal.netlify.app/', {
             waitUntil: 'networkidle0',
             timeout: 30000
         });
 
-        // Wait for calendar to be visible and fully loaded
+        console.log('Waiting for calendar widget...');
         await page.waitForSelector('#calendar-widget', { timeout: 10000 });
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Extra wait for animations
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for animations
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const timestampPath = path.join('screenshots', `calendar-${timestamp}.jpg`);
-        const latestPath = path.join('screenshots', 'latest.jpg');
+        const screenshotDir = path.join(process.cwd(), 'screenshots');
+        const timestampPath = path.join(screenshotDir, `calendar-${timestamp}.jpg`);
+        const latestPath = path.join(screenshotDir, 'latest.jpg');
 
-        console.log(`Taking screenshot: ${timestampPath}`);
+        console.log('Taking screenshot...');
         await page.screenshot({
             path: timestampPath,
-            fullPage: false,
             type: 'jpeg',
             quality: 80
         });
 
+        console.log('Optimizing screenshot...');
         await optimizeImage(timestampPath);
         await updateLatestImage(timestampPath, latestPath);
 
-        console.log('Verifying files...');
+        // Verify files were created
         const timestampExists = fs.existsSync(timestampPath);
         const latestExists = fs.existsSync(latestPath);
         
@@ -110,3 +90,8 @@ async function captureScreenshot() {
         await browser.close();
     }
 }
+
+captureScreenshot().catch(error => {
+    console.error('Unhandled error:', error);
+    process.exit(1);
+}); 
