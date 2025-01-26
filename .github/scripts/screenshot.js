@@ -28,16 +28,29 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
     }
 
     console.log(`Final image size: ${(optimizedBuffer.length / 1024).toFixed(2)}KB`);
+    await fs.promises.writeFile(inputPath, optimizedBuffer, { mode: 0o666 });
+}
+
+async function updateLatestImage(sourcePath, targetPath) {
+    console.log(`Updating latest image from ${sourcePath} to ${targetPath}`);
     
-    // Force remove existing file if it exists
-    if (fs.existsSync(inputPath)) {
-        console.log(`Removing existing file: ${inputPath}`);
-        fs.unlinkSync(inputPath);
+    // Remove the target file if it exists
+    if (fs.existsSync(targetPath)) {
+        console.log('Removing existing latest.jpg');
+        fs.unlinkSync(targetPath);
     }
+
+    // Read the source file
+    const imageBuffer = await fs.promises.readFile(sourcePath);
     
-    // Write new file
-    console.log(`Writing new file: ${inputPath}`);
-    await fs.promises.writeFile(inputPath, optimizedBuffer);
+    // Write to the target path with full permissions
+    console.log('Writing new latest.jpg');
+    await fs.promises.writeFile(targetPath, imageBuffer, { mode: 0o666 });
+    
+    // Verify the file was written
+    const fileExists = fs.existsSync(targetPath);
+    const fileSize = fs.statSync(targetPath).size;
+    console.log(`Latest.jpg exists: ${fileExists}, size: ${(fileSize / 1024).toFixed(2)}KB`);
 }
 
 async function captureScreenshot() {
@@ -85,10 +98,10 @@ async function captureScreenshot() {
         // Optimize timestamped image
         await optimizeImage(timestampPath);
 
-        // Copy optimized timestamped image to latest.jpg
-        console.log('Copying optimized image to latest.jpg');
-        fs.copyFileSync(timestampPath, latestPath);
+        // Update latest.jpg with the new screenshot
+        await updateLatestImage(timestampPath, latestPath);
 
+        // Final verification
         console.log('Verifying files...');
         const timestampExists = fs.existsSync(timestampPath);
         const latestExists = fs.existsSync(latestPath);
@@ -104,17 +117,3 @@ async function captureScreenshot() {
         const latestSize = fs.statSync(latestPath).size / 1024;
         console.log(`Final timestamp file size: ${timestampSize.toFixed(2)}KB`);
         console.log(`Final latest file size: ${latestSize.toFixed(2)}KB`);
-
-    } catch (error) {
-        console.error('Error capturing screenshot:', error);
-        process.exit(1);
-    } finally {
-        console.log('Closing browser');
-        await browser.close();
-    }
-}
-
-captureScreenshot().catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
-}); 
