@@ -1,6 +1,36 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
+
+async function optimizeImage(inputPath, maxSizeKB = 70) {
+    console.log(`Optimizing image: ${inputPath}`);
+    const imageBuffer = await fs.promises.readFile(inputPath);
+    let quality = 80;
+    let optimizedBuffer = await sharp(imageBuffer)
+        .resize(375, null, { // Width of 375px, height auto
+            withoutEnlargement: true,
+            fit: 'inside'
+        })
+        .jpeg({ quality }) // Convert to JPEG for better compression
+        .toBuffer();
+
+    // Gradually reduce quality until file size is under maxSizeKB
+    while (optimizedBuffer.length > maxSizeKB * 1024 && quality > 20) {
+        quality -= 5;
+        console.log(`Reducing quality to ${quality}...`);
+        optimizedBuffer = await sharp(imageBuffer)
+            .resize(375, null, {
+                withoutEnlargement: true,
+                fit: 'inside'
+            })
+            .jpeg({ quality })
+            .toBuffer();
+    }
+
+    console.log(`Final image size: ${(optimizedBuffer.length / 1024).toFixed(2)}KB`);
+    await fs.promises.writeFile(inputPath, optimizedBuffer);
+}
 
 async function captureScreenshot() {
     console.log('Starting screenshot capture process...');
@@ -46,34 +76,4 @@ async function captureScreenshot() {
             fullPage: false
         });
 
-        console.log(`Taking screenshot: ${latestPath}`);
-        await page.screenshot({
-            path: latestPath,
-            fullPage: false
-        });
-
-        // Verify files were created
-        console.log('Verifying files...');
-        const timestampExists = fs.existsSync(timestampPath);
-        const latestExists = fs.existsSync(latestPath);
-        
-        console.log(`Timestamp file exists: ${timestampExists}`);
-        console.log(`Latest file exists: ${latestExists}`);
-
-        if (!timestampExists || !latestExists) {
-            throw new Error('Screenshot files were not created successfully');
-        }
-
-    } catch (error) {
-        console.error('Error capturing screenshot:', error);
-        process.exit(1);
-    } finally {
-        console.log('Closing browser');
-        await browser.close();
-    }
-}
-
-captureScreenshot().catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
-}); 
+    
