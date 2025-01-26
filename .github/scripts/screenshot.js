@@ -23,6 +23,10 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
 }
 
 async function updateLatestImage(sourcePath, targetPath) {
+    // Delete the existing latest.jpg if it exists
+    if (fs.existsSync(targetPath)) {
+        await fs.promises.unlink(targetPath);
+    }
     await fs.promises.copyFile(sourcePath, targetPath);
 }
 
@@ -73,4 +77,4 @@ async function captureScreenshot() {
 captureScreenshot().catch(error => {
     console.error('Unhandled error:', error);
     process.exit(1);
-}); 
+});
