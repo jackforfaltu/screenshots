@@ -44,7 +44,6 @@ async function captureScreenshot() {
         console.log('Browser launched successfully');
         const page = await browser.newPage();
         
-        // Set viewport to a common mobile size
         await page.setViewport({
             width: 375,
             height: 812,
@@ -52,7 +51,6 @@ async function captureScreenshot() {
         });
         console.log('Viewport set');
 
-        // Navigate to the website
         console.log('Navigating to website...');
         await page.goto('https://hijri-waras-cal.netlify.app/', {
             waitUntil: 'networkidle0',
@@ -60,20 +58,22 @@ async function captureScreenshot() {
         });
         console.log('Navigation complete');
 
-        // Wait for content to load
         await new Promise(resolve => setTimeout(resolve, 2000));
         console.log('Waited for content');
 
-        // Capture timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const timestampPath = path.join('screenshots', `calendar-${timestamp}.png`);
-        const latestPath = path.join('screenshots', 'latest.png');
+        const timestampPath = path.join('screenshots', `calendar-${timestamp}.jpg`);
+        const latestPath = path.join('screenshots', 'latest.jpg');
 
-        // Take screenshots
         console.log(`Taking screenshot: ${timestampPath}`);
         await page.screenshot({
             path: timestampPath,
-            fullPage: false
+            fullPage: false,
+            type: 'jpeg',
+            quality: 80
         });
 
+        console.log(`Taking screenshot: ${latestPath}`);
+        await page.screenshot({
+            path: latestPath,
     
