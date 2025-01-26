@@ -28,7 +28,7 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
     }
 
     console.log(`Final image size: ${(optimizedBuffer.length / 1024).toFixed(2)}KB`);
-    await fs.promises.writeFile(inputPath, optimizedBuffer, { mode: 0o666 });
+    await fs.promises.writeFile(inputPath, optimizedBuffer);
 }
 
 async function updateLatestImage(sourcePath, targetPath) {
@@ -42,7 +42,7 @@ async function updateLatestImage(sourcePath, targetPath) {
     const imageBuffer = await fs.promises.readFile(sourcePath);
     
     console.log('Writing new latest.jpg');
-    await fs.promises.writeFile(targetPath, imageBuffer, { mode: 0o666 });
+    await fs.promises.writeFile(targetPath, imageBuffer);
     
     const fileExists = fs.existsSync(targetPath);
     const fileSize = fs.statSync(targetPath).size;
@@ -50,33 +50,21 @@ async function updateLatestImage(sourcePath, targetPath) {
 }
 
 async function captureScreenshot() {
-    console.log('Starting screenshot capture process...');
-    
     const browser = await puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: ['--no-sandbox']
     });
 
     try {
-        console.log('Browser launched successfully');
         const page = await browser.newPage();
-        
-        await page.setViewport({
-            width: 375,
-            height: 812,
-            deviceScaleFactor: 2
-        });
-        console.log('Viewport set');
-
-        console.log('Navigating to website...');
-        await page.goto('https://hijri-waras-cal.netlify.app/', {
+        await page.setViewport({ width: 375, height: 812 });
+        await page.goto('http://localhost:8080/widget', {
             waitUntil: 'networkidle0',
             timeout: 30000
         });
-        console.log('Navigation complete');
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('Waited for content');
+        // Wait for calendar to be visible
+        await page.waitForSelector('#calendar-widget', { timeout: 10000 });
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const timestampPath = path.join('screenshots', `calendar-${timestamp}.jpg`);
@@ -117,3 +105,8 @@ async function captureScreenshot() {
         await browser.close();
     }
 }
+
+captureScreenshot().catch(error => {
+    console.error('Unhandled error:', error);
+    process.exit(1);
+}); 
