@@ -17,14 +17,14 @@ async function captureScreenshot() {
             deviceScaleFactor: 2
         });
 
-        // Navigate to the website
+        // Navigate to the website and wait for network to be idle
         await page.goto('https://hijri-waras-cal.netlify.app/', {
             waitUntil: 'networkidle0',
             timeout: 30000
         });
 
-        // Wait for any dynamic content to load
-        await page.waitForTimeout(2000);
+        // Use setTimeout wrapped in a Promise instead of waitForTimeout
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Capture timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -49,4 +49,4 @@ async function captureScreenshot() {
     }
 }
 
-captureScreenshot();  
+captureScreenshot(); 
