@@ -8,14 +8,13 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
     const imageBuffer = await fs.promises.readFile(inputPath);
     let quality = 80;
     let optimizedBuffer = await sharp(imageBuffer)
-        .resize(375, null, { // Width of 375px, height auto
+        .resize(375, null, {
             withoutEnlargement: true,
             fit: 'inside'
         })
-        .jpeg({ quality }) // Convert to JPEG for better compression
+        .jpeg({ quality })
         .toBuffer();
 
-    // Gradually reduce quality until file size is under maxSizeKB
     while (optimizedBuffer.length > maxSizeKB * 1024 && quality > 20) {
         quality -= 5;
         console.log(`Reducing quality to ${quality}...`);
@@ -76,4 +75,40 @@ async function captureScreenshot() {
         console.log(`Taking screenshot: ${latestPath}`);
         await page.screenshot({
             path: latestPath,
-    
+            fullPage: false,
+            type: 'jpeg',
+            quality: 80
+        });
+
+        await optimizeImage(timestampPath);
+        await optimizeImage(latestPath);
+
+        console.log('Verifying files...');
+        const timestampExists = fs.existsSync(timestampPath);
+        const latestExists = fs.existsSync(latestPath);
+        
+        console.log(`Timestamp file exists: ${timestampExists}`);
+        console.log(`Latest file exists: ${latestExists}`);
+
+        if (!timestampExists || !latestExists) {
+            throw new Error('Screenshot files were not created successfully');
+        }
+
+        const timestampSize = fs.statSync(timestampPath).size / 1024;
+        const latestSize = fs.statSync(latestPath).size / 1024;
+        console.log(`Final timestamp file size: ${timestampSize.toFixed(2)}KB`);
+        console.log(`Final latest file size: ${latestSize.toFixed(2)}KB`);
+
+    } catch (error) {
+        console.error('Error capturing screenshot:', error);
+        process.exit(1);
+    } finally {
+        console.log('Closing browser');
+        await browser.close();
+    }
+}
+
+captureScreenshot().catch(error => {
+    console.error('Unhandled error:', error);
+    process.exit(1);
+}); 
