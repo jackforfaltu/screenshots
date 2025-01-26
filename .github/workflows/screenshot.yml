@@ -1,13 +1,16 @@
-name: Capture Screenshot
+name: Capture Screenshots
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:        # Manual trigger
 
 jobs:
   capture:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Add this permission
+    
     steps:
       - uses: actions/checkout@v3
         with:
@@ -17,32 +20,16 @@ jobs:
         with:
           node-version: 18
           
-      - name: Install dependencies
-        run: npm install puppeteer sharp
-        
-      - name: Create screenshots directory
-        run: mkdir -p screenshots
-        
-      - name: Capture screenshot
-        run: node .github/scripts/screenshot.js
-        
-      - name: List files
+      - run: npm install puppeteer sharp
+      
+      - run: mkdir -p screenshots
+      
+      - run: node .github/scripts/screenshot.js
+      
+      - name: Commit and push if changed
         run: |
-          echo "Current directory structure:"
-          tree || ls -R
-          echo "Screenshots directory contents:"
-          ls -la screenshots/
-          
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'GitHub Actions Bot'
-          git config --global user.email 'actions@github.com'
-          
-          # Add all jpg files in screenshots directory
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add screenshots/*.jpg
-          
-          # Only commit if there are changes
           git diff --staged --quiet || git commit -m "Update screenshots $(date +'%Y-%m-%d %H:%M:%S')"
-          
-          # Push if there are commits to push
-          git push origin screenshots 
+          git push 
