@@ -34,20 +34,16 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
 async function updateLatestImage(sourcePath, targetPath) {
     console.log(`Updating latest image from ${sourcePath} to ${targetPath}`);
     
-    // Remove the target file if it exists
     if (fs.existsSync(targetPath)) {
         console.log('Removing existing latest.jpg');
         fs.unlinkSync(targetPath);
     }
 
-    // Read the source file
     const imageBuffer = await fs.promises.readFile(sourcePath);
     
-    // Write to the target path with full permissions
     console.log('Writing new latest.jpg');
     await fs.promises.writeFile(targetPath, imageBuffer, { mode: 0o666 });
     
-    // Verify the file was written
     const fileExists = fs.existsSync(targetPath);
     const fileSize = fs.statSync(targetPath).size;
     console.log(`Latest.jpg exists: ${fileExists}, size: ${(fileSize / 1024).toFixed(2)}KB`);
@@ -86,7 +82,6 @@ async function captureScreenshot() {
         const timestampPath = path.join('screenshots', `calendar-${timestamp}.jpg`);
         const latestPath = path.join('screenshots', 'latest.jpg');
 
-        // Take timestamped screenshot
         console.log(`Taking screenshot: ${timestampPath}`);
         await page.screenshot({
             path: timestampPath,
@@ -95,13 +90,9 @@ async function captureScreenshot() {
             quality: 80
         });
 
-        // Optimize timestamped image
         await optimizeImage(timestampPath);
-
-        // Update latest.jpg with the new screenshot
         await updateLatestImage(timestampPath, latestPath);
 
-        // Final verification
         console.log('Verifying files...');
         const timestampExists = fs.existsSync(timestampPath);
         const latestExists = fs.existsSync(latestPath);
@@ -117,3 +108,12 @@ async function captureScreenshot() {
         const latestSize = fs.statSync(latestPath).size / 1024;
         console.log(`Final timestamp file size: ${timestampSize.toFixed(2)}KB`);
         console.log(`Final latest file size: ${latestSize.toFixed(2)}KB`);
+
+    } catch (error) {
+        console.error('Error capturing screenshot:', error);
+        process.exit(1);
+    } finally {
+        console.log('Closing browser');
+        await browser.close();
+    }
+}
