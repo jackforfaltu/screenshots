@@ -57,14 +57,21 @@ async function captureScreenshot() {
 
     try {
         const page = await browser.newPage();
-        await page.setViewport({ width: 375, height: 812 });
-        await page.goto('http://localhost:8080/widget', {
+        await page.setViewport({ 
+            width: 375, 
+            height: 812,
+            deviceScaleFactor: 2
+        });
+        
+        // Use the deployed URL instead of localhost
+        await page.goto('https://hijri-waras-cal.netlify.app/', {
             waitUntil: 'networkidle0',
             timeout: 30000
         });
 
-        // Wait for calendar to be visible
+        // Wait for calendar to be visible and fully loaded
         await page.waitForSelector('#calendar-widget', { timeout: 10000 });
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Extra wait for animations
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const timestampPath = path.join('screenshots', `calendar-${timestamp}.jpg`);
@@ -102,11 +109,4 @@ async function captureScreenshot() {
         process.exit(1);
     } finally {
         console.log('Closing browser');
-        await browser.close();
-    }
-}
-
-captureScreenshot().catch(error => {
-    console.error('Unhandled error:', error);
-    process.exit(1);
-}); 
+    
