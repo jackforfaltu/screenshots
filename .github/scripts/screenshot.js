@@ -62,23 +62,25 @@ async function captureScreenshot() {
         // Wait for page to be fully loaded
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Get the combined dimensions of both elements
+        // Get the combined dimensions of all three elements
         const elementDimensions = await page.evaluate(() => {
+            const yearRow = document.querySelector('body > main > div > div.year-row');
             const monthRow = document.querySelector('body > main > div > div.month-row');
             const calendar = document.querySelector('body > main > div > div.calendar');
             
-            if (!monthRow || !calendar) {
+            if (!yearRow || !monthRow || !calendar) {
                 throw new Error('Required elements not found');
             }
 
+            const yearRowRect = yearRow.getBoundingClientRect();
             const monthRowRect = monthRow.getBoundingClientRect();
             const calendarRect = calendar.getBoundingClientRect();
 
-            // Calculate the combined area
-            const top = Math.min(monthRowRect.top, calendarRect.top);
-            const bottom = Math.max(monthRowRect.bottom, calendarRect.bottom);
-            const left = Math.min(monthRowRect.left, calendarRect.left);
-            const right = Math.max(monthRowRect.right, calendarRect.right);
+            // Calculate the combined area including all three elements
+            const top = Math.min(yearRowRect.top, monthRowRect.top, calendarRect.top);
+            const bottom = Math.max(yearRowRect.bottom, monthRowRect.bottom, calendarRect.bottom);
+            const left = Math.min(yearRowRect.left, monthRowRect.left, calendarRect.left);
+            const right = Math.max(yearRowRect.right, monthRowRect.right, calendarRect.right);
 
             return {
                 x: left,
