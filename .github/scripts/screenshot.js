@@ -106,7 +106,20 @@ async function captureScreenshot() {
             }
         });
 
-        // Simply copy the file without any optimization or resizing
+        // Resize the image while maintaining aspect ratio
+        const imageBuffer = await fs.promises.readFile(timestampPath);
+        const resizedImage = await sharp(imageBuffer)
+            .resize(360, 376, {
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 1 }
+            })
+            .jpeg({ quality: 80 })
+            .toBuffer();
+
+        // Write the resized image
+        await fs.promises.writeFile(timestampPath, resizedImage);
+
+        // Update latest image
         await updateLatestImage(timestampPath, latestPath);
 
     } catch (error) {
