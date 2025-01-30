@@ -39,8 +39,8 @@ async function captureScreenshot() {
     try {
         const page = await browser.newPage();
         await page.setViewport({ 
-            width: 375, 
-            height: 812,
+            width: 360,
+            height: 376,
             deviceScaleFactor: 2
         });
         
