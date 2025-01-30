@@ -62,16 +62,29 @@ async function captureScreenshot() {
         // Wait for page to be fully loaded
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Get the main content element's dimensions and position
+        // Get the combined dimensions of both elements
         const elementDimensions = await page.evaluate(() => {
-            // Select the main content area (adjust the selector as needed)
-            const element = document.querySelector('main') || document.querySelector('.calendar-container') || document.body;
-            const rect = element.getBoundingClientRect();
+            const monthRow = document.querySelector('body > main > div > div.month-row');
+            const calendar = document.querySelector('body > main > div > div.calendar');
+            
+            if (!monthRow || !calendar) {
+                throw new Error('Required elements not found');
+            }
+
+            const monthRowRect = monthRow.getBoundingClientRect();
+            const calendarRect = calendar.getBoundingClientRect();
+
+            // Calculate the combined area
+            const top = Math.min(monthRowRect.top, calendarRect.top);
+            const bottom = Math.max(monthRowRect.bottom, calendarRect.bottom);
+            const left = Math.min(monthRowRect.left, calendarRect.left);
+            const right = Math.max(monthRowRect.right, calendarRect.right);
+
             return {
-                x: rect.x,
-                y: rect.y,
-                width: rect.width,
-                height: rect.height
+                x: left,
+                y: top,
+                width: right - left,
+                height: bottom - top
             };
         });
 
@@ -80,7 +93,7 @@ async function captureScreenshot() {
         const timestampPath = path.join(screenshotDir, `calendar-${timestamp}.jpg`);
         const latestPath = path.join(screenshotDir, 'latest.jpg');
 
-        // Capture just the main content area
+        // Capture the combined area
         await page.screenshot({
             path: timestampPath,
             type: 'jpeg',
