@@ -3,28 +3,18 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 
-async function optimizeImage(inputPath, maxSizeKB = 70, targetSize = null) {
+async function optimizeImage(inputPath, maxSizeKB = 70) {
     console.log(`Optimizing image: ${inputPath}`);
     const imageBuffer = await fs.promises.readFile(inputPath);
     let quality = 80;
-    let sharpInstance = sharp(imageBuffer);
-
-    // If target size is provided, fit the image to those dimensions
-    if (targetSize) {
-        sharpInstance = sharpInstance.resize(targetSize.width, targetSize.height, {
-            fit: 'contain',
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
-        });
-    }
-
-    let optimizedBuffer = await sharpInstance
+    let optimizedBuffer = await sharp(imageBuffer)
         .jpeg({ quality })
         .toBuffer();
 
     while (optimizedBuffer.length > maxSizeKB * 1024 && quality > 20) {
         quality -= 5;
         console.log(`Reducing quality to ${quality}...`);
-        optimizedBuffer = await sharpInstance
+        optimizedBuffer = await sharp(imageBuffer)
             .jpeg({ quality })
             .toBuffer();
     }
@@ -48,12 +38,6 @@ async function captureScreenshot() {
 
     try {
         const page = await browser.newPage();
-        // First set a large viewport to ensure we can see everything
-        await page.setViewport({ 
-            width: 1200,
-            height: 1200,
-            deviceScaleFactor: 2
-        });
         
         await page.goto('https://hijri-waras-cal.netlify.app/', {
             waitUntil: 'networkidle0',
@@ -68,15 +52,7 @@ async function captureScreenshot() {
         const timestampPath = path.join(screenshotDir, `calendar-${timestamp}.jpg`);
         const latestPath = path.join(screenshotDir, 'latest.jpg');
 
-        // Get the full page dimensions
-        const dimensions = await page.evaluate(() => {
-            return {
-                width: document.documentElement.scrollWidth,
-                height: document.documentElement.scrollHeight
-            };
-        });
-
-        // Capture the full page
+        // Capture the full page without any size restrictions
         await page.screenshot({
             path: timestampPath,
             type: 'jpeg',
@@ -84,11 +60,8 @@ async function captureScreenshot() {
             fullPage: true
         });
 
-        // Modify the optimizeImage function call to include resizing
-        await optimizeImage(timestampPath, 70, {
-            width: 360,
-            height: 376
-        });
+        // Only optimize the file size, no resizing
+        await optimizeImage(timestampPath);
         await updateLatestImage(timestampPath, latestPath);
 
     } catch (error) {
