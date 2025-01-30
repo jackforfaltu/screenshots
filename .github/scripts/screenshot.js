@@ -3,18 +3,28 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 
-async function optimizeImage(inputPath, maxSizeKB = 70) {
+async function optimizeImage(inputPath, maxSizeKB = 70, targetSize = null) {
     console.log(`Optimizing image: ${inputPath}`);
     const imageBuffer = await fs.promises.readFile(inputPath);
     let quality = 80;
-    let optimizedBuffer = await sharp(imageBuffer)
+    let sharpInstance = sharp(imageBuffer);
+
+    // If target size is provided, fit the image to those dimensions
+    if (targetSize) {
+        sharpInstance = sharpInstance.resize(targetSize.width, targetSize.height, {
+            fit: 'contain',
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
+        });
+    }
+
+    let optimizedBuffer = await sharpInstance
         .jpeg({ quality })
         .toBuffer();
 
     while (optimizedBuffer.length > maxSizeKB * 1024 && quality > 20) {
         quality -= 5;
         console.log(`Reducing quality to ${quality}...`);
-        optimizedBuffer = await sharp(imageBuffer)
+        optimizedBuffer = await sharpInstance
             .jpeg({ quality })
             .toBuffer();
     }
@@ -38,9 +48,10 @@ async function captureScreenshot() {
 
     try {
         const page = await browser.newPage();
+        // First set a large viewport to ensure we can see everything
         await page.setViewport({ 
-            width: 360,
-            height: 376,
+            width: 1200,
+            height: 1200,
             deviceScaleFactor: 2
         });
         
@@ -57,13 +68,27 @@ async function captureScreenshot() {
         const timestampPath = path.join(screenshotDir, `calendar-${timestamp}.jpg`);
         const latestPath = path.join(screenshotDir, 'latest.jpg');
 
+        // Get the full page dimensions
+        const dimensions = await page.evaluate(() => {
+            return {
+                width: document.documentElement.scrollWidth,
+                height: document.documentElement.scrollHeight
+            };
+        });
+
+        // Capture the full page
         await page.screenshot({
             path: timestampPath,
             type: 'jpeg',
-            quality: 80
+            quality: 80,
+            fullPage: true
         });
 
-        await optimizeImage(timestampPath);
+        // Modify the optimizeImage function call to include resizing
+        await optimizeImage(timestampPath, 70, {
+            width: 360,
+            height: 376
+        });
         await updateLatestImage(timestampPath, latestPath);
 
     } catch (error) {
