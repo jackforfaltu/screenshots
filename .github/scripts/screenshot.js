@@ -9,11 +9,11 @@ async function optimizeImage(inputPath, maxSizeKB = 70, targetSize = null) {
     let quality = 80;
     let sharpInstance = sharp(imageBuffer);
 
-    // If target size is provided, fit the image to those dimensions
+    // If target size is provided, fit the image to fill the dimensions
     if (targetSize) {
         sharpInstance = sharpInstance.resize(targetSize.width, targetSize.height, {
-            fit: 'contain',
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
+            fit: 'cover',
+            position: 'center'
         });
     }
 
