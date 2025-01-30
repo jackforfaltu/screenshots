@@ -93,7 +93,7 @@ async function captureScreenshot() {
         const timestampPath = path.join(screenshotDir, `calendar-${timestamp}.jpg`);
         const latestPath = path.join(screenshotDir, 'latest.jpg');
 
-        // Capture the combined area
+        // Capture the combined area without any modifications
         await page.screenshot({
             path: timestampPath,
             type: 'jpeg',
@@ -106,11 +106,7 @@ async function captureScreenshot() {
             }
         });
 
-        // Modify the optimizeImage function call to include resizing
-        await optimizeImage(timestampPath, 70, {
-            width: 360,
-            height: 376
-        });
+        // Simply copy the file without any optimization or resizing
         await updateLatestImage(timestampPath, latestPath);
 
     } catch (error) {
