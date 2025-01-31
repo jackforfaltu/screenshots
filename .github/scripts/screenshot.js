@@ -112,8 +112,7 @@ async function captureScreenshot() {
         const imageBuffer = await fs.promises.readFile(timestampPath);
         const resizedImage = await sharp(imageBuffer)
             .resize(360, 376, {
-                fit: 'cover',
-                position: 'center'
+                fit: 'inside'
             })
             .jpeg({ quality: 80 })
             .toBuffer();
