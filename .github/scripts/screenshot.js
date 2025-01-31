@@ -3,17 +3,28 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 
-async function optimizeImage(inputPath, maxSizeKB = 70) {
+async function optimizeImage(inputPath, maxSizeKB = 70, targetSize = null) {
     console.log(`Optimizing image: ${inputPath}`);
+    const imageBuffer = await fs.promises.readFile(inputPath);
     let quality = 80;
-    let optimizedBuffer = await sharp(inputPath)
+    let sharpInstance = sharp(imageBuffer);
+
+    // If target size is provided, fit the image to fill the dimensions
+    if (targetSize) {
+        sharpInstance = sharpInstance.resize(targetSize.width, targetSize.height, {
+            fit: 'cover',
+            position: 'center'
+        });
+    }
+
+    let optimizedBuffer = await sharpInstance
         .jpeg({ quality })
         .toBuffer();
 
     while (optimizedBuffer.length > maxSizeKB * 1024 && quality > 20) {
         quality -= 5;
         console.log(`Reducing quality to ${quality}...`);
-        optimizedBuffer = await sharp(inputPath)
+        optimizedBuffer = await sharpInstance
             .jpeg({ quality })
             .toBuffer();
     }
@@ -22,6 +33,7 @@ async function optimizeImage(inputPath, maxSizeKB = 70) {
 }
 
 async function updateLatestImage(sourcePath, targetPath) {
+    // Delete the existing latest.jpg if it exists
     if (fs.existsSync(targetPath)) {
         await fs.promises.unlink(targetPath);
     }
@@ -36,37 +48,80 @@ async function captureScreenshot() {
 
     try {
         const page = await browser.newPage();
-        await page.setViewport({ width: 1200, height: 1200, deviceScaleFactor: 2 });
-        await page.goto('https://hijri-waras-cal.netlify.app/', { waitUntil: 'networkidle0', timeout: 30000 });
+        await page.setViewport({ 
+            width: 1200,
+            height: 1200,
+            deviceScaleFactor: 2
+        });
+        
+        await page.goto('https://hijri-waras-cal.netlify.app/', {
+            waitUntil: 'networkidle0',
+            timeout: 30000
+        });
+
+        // Wait for page to be fully loaded
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        const element = await page.$('body > main > div');
-        if (!element) {
-            throw new Error('Required element not found');
-        }
-        
-        const boundingBox = await element.boundingBox();
-        if (!boundingBox) {
-            throw new Error('Could not determine bounding box');
-        }
+        // Get the combined dimensions of all three elements
+        const elementDimensions = await page.evaluate(() => {
+            const yearRow = document.querySelector('body > main > div > div.year-row');
+            const monthRow = document.querySelector('body > main > div > div.month-row');
+            const calendar = document.querySelector('body > main > div > div.calendar');
+            
+            if (!yearRow || !monthRow || !calendar) {
+                throw new Error('Required elements not found');
+            }
+
+            const yearRowRect = yearRow.getBoundingClientRect();
+            const monthRowRect = monthRow.getBoundingClientRect();
+            const calendarRect = calendar.getBoundingClientRect();
+
+            // Calculate the combined area including all three elements
+            const top = Math.min(yearRowRect.top, monthRowRect.top, calendarRect.top);
+            const bottom = Math.max(yearRowRect.bottom, monthRowRect.bottom, calendarRect.bottom);
+            const left = Math.min(yearRowRect.left, monthRowRect.left, calendarRect.left);
+            const right = Math.max(yearRowRect.right, monthRowRect.right, calendarRect.right);
+
+            return {
+                x: left,
+                y: top,
+                width: right - left,
+                height: bottom - top
+            };
+        });
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const screenshotDir = path.join(process.cwd(), 'screenshots');
-        if (!fs.existsSync(screenshotDir)) fs.mkdirSync(screenshotDir);
         const timestampPath = path.join(screenshotDir, `calendar-${timestamp}.jpg`);
         const latestPath = path.join(screenshotDir, 'latest.jpg');
 
+        // Capture the combined area without any modifications
         await page.screenshot({
             path: timestampPath,
             type: 'jpeg',
             quality: 80,
-            clip: boundingBox
+            clip: {
+                x: elementDimensions.x,
+                y: elementDimensions.y,
+                width: elementDimensions.width,
+                height: elementDimensions.height
+            }
         });
 
-        await sharp(timestampPath)
-            .resize(360, 376, { fit: 'cover' })
-            .toFile(timestampPath);
+        // Resize the image while maintaining aspect ratio
+        const imageBuffer = await fs.promises.readFile(timestampPath);
+        const resizedImage = await sharp(imageBuffer)
+            .resize(360, 376, {
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 1 }
+            })
+            .jpeg({ quality: 80 })
+            .toBuffer();
 
+        // Write the resized image
+        await fs.promises.writeFile(timestampPath, resizedImage);
+
+        // Update latest image
         await updateLatestImage(timestampPath, latestPath);
 
     } catch (error) {
