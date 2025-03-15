@@ -3,6 +3,8 @@ name: Capture Screenshots
 on:
   schedule:
     - cron: '0 */12 * * *'  # Every 12 hours
+    - cron: '0 0 * * *'   # Every day at 12:00 AM UTC
+    - cron: '0 12 * * *'  # Every day at 12:00 PM UTC
   workflow_dispatch:        # Manual trigger
 
 jobs:
