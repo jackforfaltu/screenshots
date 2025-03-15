@@ -54,7 +54,7 @@ async function captureScreenshot() {
             deviceScaleFactor: 2
         });
         
-        await page.goto('https://hijri-waras-cal.netlify.app/', {
+        await page.goto('https://hijri-cal.pages.dev/', {
             waitUntil: 'networkidle0',
             timeout: 30000
         });
