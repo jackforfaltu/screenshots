@@ -62,26 +62,19 @@ async function captureScreenshot() {
         // Wait for page to be fully loaded
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Get the combined dimensions of all three elements
+        // Get the combined dimensions of the navigation and calendar grid
         const elementDimensions = await page.evaluate(() => {
-            const yearRow = document.querySelector('body > main > div > div.year-row');
-            const monthRow = document.querySelector('body > main > div > div.month-row');
-            const calendar = document.querySelector('body > main > div > div.calendar');
-            
-            if (!yearRow || !monthRow || !calendar) {
+            const nav = document.querySelector('nav.calendar-navigation');
+            const calendar = document.querySelector('table#calendar-grid.calendar-grid');
+            if (!nav || !calendar) {
                 throw new Error('Required elements not found');
             }
-
-            const yearRowRect = yearRow.getBoundingClientRect();
-            const monthRowRect = monthRow.getBoundingClientRect();
+            const navRect = nav.getBoundingClientRect();
             const calendarRect = calendar.getBoundingClientRect();
-
-            // Calculate the combined area including all three elements
-            const top = Math.min(yearRowRect.top, monthRowRect.top, calendarRect.top);
-            const bottom = Math.max(yearRowRect.bottom, monthRowRect.bottom, calendarRect.bottom);
-            const left = Math.min(yearRowRect.left, monthRowRect.left, calendarRect.left);
-            const right = Math.max(yearRowRect.right, monthRowRect.right, calendarRect.right);
-
+            const top = Math.min(navRect.top, calendarRect.top);
+            const bottom = Math.max(navRect.bottom, calendarRect.bottom);
+            const left = Math.min(navRect.left, calendarRect.left);
+            const right = Math.max(navRect.right, calendarRect.right);
             return {
                 x: left,
                 y: top,
